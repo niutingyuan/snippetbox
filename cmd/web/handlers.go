@@ -10,6 +10,14 @@ import (
 	"unicode/utf8"
 )
 
+// Define a snippetCreateForm struct to represent the form data and validation errors for the form fields. Note that all the struct fields are deliberately exported (i.e. start with a capital letter). This is because struct fields must be exported in order to be read by the html/template package when rendering the template.
+type snippetCreateForm struct {
+	Title       string
+	Content     string
+	Expires     int
+	FieldErrors map[string]string
+}
+
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	snippets, err := app.snippets.Latest()
 	if err != nil {
@@ -49,15 +57,12 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 	data := app.newTemplateData(r)
 
-	app.render(w, r, http.StatusOK, "create.tmpl", data)
-}
+	// Initialize a new snippetCreateForm instance and pass it to the template. Notice how this is also a great opportunity to set any default or 'initial' values for the form --- here we set the initial value for the snippet expiry to 365 days.
+	data.Form = snippetCreateForm{
+		Expires: 365,
+	}
 
-// Define a snippetCreateForm struct to represent the form data and validation errors for the form fields. Note that all the struct fields are deliberately exported (i.e. start with a capital letter). This is because struct fields must be exported in order to be read by the html/template package when rendering the template.
-type snippetCreateForm struct {
-	Title       string
-	Content     string
-	Expires     int
-	FieldErrors map[string]string
+	app.render(w, r, http.StatusOK, "create.tmpl", data)
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +81,7 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 
 	// Create an instance of the snippetCreateForm struct containing the values from the form and an empty map for any validation errors.
 	form := snippetCreateForm{
-		Title:       r.PostForm.Get("Title"),
+		Title:       r.PostForm.Get("title"),
 		Content:     r.PostForm.Get("content"),
 		Expires:     expires,
 		FieldErrors: map[string]string{},
@@ -84,9 +89,9 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 
 	// Update the validation checks so that they operate on the snippetCreateForm instance.
 	if strings.TrimSpace(form.Title) == "" {
-		form.FieldErrors["Title"] = "This field cannot be bland"
+		form.FieldErrors["title"] = "This field cannot be bland"
 	} else if utf8.RuneCountInString(form.Title) > 100 {
-		form.FieldErrors["Title"] = "This field cannot be more than 100 characters long"
+		form.FieldErrors["title"] = "This field cannot be more than 100 characters long"
 	}
 
 	if strings.TrimSpace(form.Content) == "" {
